@@ -39,12 +39,15 @@ class Music(commands.Cog):
 
     @commands.hybrid_command(name="join")
     @commands.guild_only()
-    async def join(self, ctx, *, channel: discord.VoiceChannel):
+    async def join(self, ctx):
         """Joins a voice channel"""
-
-        if ctx.voice_client is not None:
-            return await ctx.voice_client.move_to(channel)
-
+        if not ctx.message.author.voice:
+            await ctx.send(
+                "{} is not connected to a voice channel".format(ctx.message.author.name)
+            )
+            return
+        else:
+            channel = ctx.message.author.voice.channel
         await channel.connect()
 
     @commands.hybrid_command(name="stop")

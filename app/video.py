@@ -1,4 +1,3 @@
-# Suppress noise about console usage from errors
 import asyncio
 
 import discord
@@ -9,8 +8,9 @@ youtube_dl.utils.bug_reports_message = lambda: ""
 
 ytdl_format_options = {
     "format": "bestaudio/best",
+    "nonplaylist": True,
     "quiet": True,
-    'title': True,
+    "title": True,
 }
 
 ffmpeg_options = {
