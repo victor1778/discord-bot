@@ -85,7 +85,7 @@ class Music(commands.Cog):
                 "https://www.youtube.com/results", params=params
             )
             search_results = re.findall(r"/watch\?v=(.{11})", response.text)
-            return search_results[:1]
+            return search_results[0]
 
     @commands.hybrid_command(name="play", aliases=["p"])
     @commands.guild_only()
@@ -93,9 +93,9 @@ class Music(commands.Cog):
         """Streams from a url or a search query (almost anything youtube_dl supports)"""
 
         if not re.match(url_pattern, song):
-            video_ids = await self._search_yt(song)
-            song = f"https://www.youtube.com/watch?v={video_ids[0]}"
-            if not video_ids:
+            video_id = await self._search_yt(song)
+            song = f"https://www.youtube.com/watch?v={video_id}"
+            if not video_id:
                 await ctx.send("No video IDs found for the search query.")
 
         client = ctx.guild.voice_client
