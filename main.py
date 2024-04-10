@@ -1,5 +1,6 @@
 import asyncio
 import os
+import sys
 
 import discord
 from dotenv import load_dotenv
@@ -7,13 +8,13 @@ from dotenv import load_dotenv
 from app.bot import Bot
 from app.cogs import Music
 
-if not discord.opus.is_loaded():
-    discord.opus.load_opus("/opt/homebrew/lib/libopus.dylib")
+if sys.platform.startswith("darwin"):
+    if not discord.opus.is_loaded():
+        discord.opus.load_opus("/opt/homebrew/lib/libopus.dylib")
 
 load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-
 bot = Bot()
 
 

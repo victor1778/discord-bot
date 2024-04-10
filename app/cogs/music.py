@@ -1,9 +1,13 @@
 import asyncio
+import re
 
 import discord
+import httpx
 from discord.ext import commands
 
 from ..video import YTDLSource
+
+url_pattern = r"^(https?://)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$"
 
 
 async def audio_playing(ctx):
@@ -74,12 +78,27 @@ class Music(commands.Cog):
         )
         await ctx.send(embed=embed)
 
+    async def _search_yt(self, args):
+        params = {"search_query": args}
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://www.youtube.com/results", params=params
+            )
+            search_results = re.findall(r"/watch\?v=(.{11})", response.text)
+            return search_results[:1]
+
     @commands.hybrid_command(name="play", aliases=["p"])
     @commands.guild_only()
     async def play(self, ctx, *, song: str):
-        """Streams from a url (almost anything youtube_dl supports)"""
+        """Streams from a url or a search query (almost anything youtube_dl supports)"""
+
+        if not re.match(url_pattern, song):
+            video_ids = await self._search_yt(song)
+            song = f"https://www.youtube.com/watch?v={video_ids[0]}"
+            if not video_ids:
+                await ctx.send("No video IDs found for the search query.")
+
         client = ctx.guild.voice_client
-        pfp = ctx.author.display_avatar
 
         if client and client.channel:
             source = await YTDLSource.from_url(song, loop=self.bot.loop, stream=True)
