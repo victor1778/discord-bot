@@ -25,7 +25,6 @@ async def on_ready():
 
 async def setup():
     await bot.add_cog(Music(bot))
-    await bot.add_cog(Server(bot))
     await bot.start(DISCORD_TOKEN)
 
 

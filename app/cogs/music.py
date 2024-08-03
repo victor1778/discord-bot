@@ -1,5 +1,6 @@
 import asyncio
 import re
+from urllib import response
 
 import discord
 import httpx
@@ -201,3 +202,60 @@ class Music(commands.Cog):
     async def skip(self, ctx):
         client = ctx.voice_client
         client.stop()
+
+    @commands.hybrid_command(name="searchwaifu")
+    async def randomwaifu(self, ctx, tags: str = None):
+        url = 'https://api.waifu.im/search'
+        
+        # Si no se proporcionan tags, usa un conjunto predeterminado
+        included_tags = tags.split(",") if tags else ['raiden-shogun', 'maid']
+        
+        params = {
+            'included_tags': included_tags,
+            'height': '>=2000'
+        }
+
+        async with httpx.AsyncClient() as client:
+         response = await client.get(url, params=params)
+         if response.status_code == 200:
+            data = response.json()
+            
+            # imprimiendo datos
+            print(data)
+            
+            images = data.get("images", [])
+            if images:
+                image = images[0]
+                image_url = image.get("url")  # Asegúrate de que este es el campo correcto
+                
+                if image_url:
+                    # Envía el mensaje con la imagen
+                    embed = discord.Embed(title="Onichan /ᐠ - ˕ -マ")
+                    embed.set_image(url=image_url)
+                    await ctx.send(embed=embed)
+                else:
+                    await ctx.send("No hay URL de imagen en la respuesta.")
+            else:
+                await ctx.send("No hay resultados para el tag")
+         else:
+            await ctx.send(f"API returned a {response.status_code} status code")
+
+    @commands.hybrid_command(name="waifulist")
+    async def waifulist(self, ctx):
+        URL = "https://api.waifu.im/tags"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(URL)
+        
+        if response.status_code == 200:
+            data = response.json()
+            versatile_tags = data.get("versatile", [])
+            nsfw_tags = data.get("nsfw", [])
+            
+            # Construir el mensaje
+            message = "Lista de waifus:\n"
+            message += "Versatile:\n" + "\n".join(f"- {tag}" for tag in versatile_tags) + "\n\n"
+            message += "NSFW:\n" + "\n".join(f"- {tag}" for tag in nsfw_tags)
+
+            await ctx.send(message)
+        else:
+            await ctx.send(f"API returned a {response.status_code} status code")
