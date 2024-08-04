@@ -259,3 +259,72 @@ class Music(commands.Cog):
             await ctx.send(message)
         else:
             await ctx.send(f"API returned a {response.status_code} status code")
+
+
+    @commands.hybrid_command(name="startserver")
+    async def startserver(self, ctx):
+        URL = "https://2sisz7vc3f.execute-api.us-east-1.amazonaws.com/prod/v1/launch"
+        
+        # Leer el contenido del archivo de texto
+        with open('public/ascii.txt', 'r') as file:
+            ascii_art = file.read()
+        
+        while True:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(URL)
+                if response.status_code == 200:
+                    data = response.json()
+                    message = data.get("message")
+                    sfn_execution_in_progress = data.get("sfn_execution_in_progress", "false").strip().lower()
+                    server_status = data.get("server_status", "false").strip().lower()
+
+                    # Construyendo el mensaje
+                    response_message = f"Server started:\n- {message}\n- sfn_execution_in_progress: {sfn_execution_in_progress}"
+
+                    if server_status == "true":
+                        await ctx.send(f"Server start successful\nIP: pz-craft.online\n```\n{ascii_art}\n```")
+                        break
+                    else:
+                        await ctx.send(f"{response_message}\nRetrying...\n```\n{ascii_art}\n```")
+                        await asyncio.sleep(120)  # Esperar 2 minutos antes de volver a intentar
+                elif response.status_code == 202:
+                    await ctx.send(f"API returned a {response.status_code} status code. Retrying...")
+    
+
+    @commands.hybrid_command(name="serverstatus")
+    async def serverstatus(self, ctx):
+        URL = "https://api.mcsrvstat.us/3/pz-craft.online"
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(URL)
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Crear un embed para mostrar la información del servidor
+                embed = discord.Embed(title="PZ MINECRAFT SERVER", color=discord.Color.green() if data['online'] else discord.Color.red())
+                embed.add_field(name="IP", value=data['ip'], inline=True)
+                embed.add_field(name="Port", value=data['port'], inline=True)
+                embed.add_field(name="Version", value=data['version'], inline=True)
+                embed.add_field(name="Players Online", value=f"{data['players']['online']}/{data['players']['max']}", inline=True)
+                embed.add_field(name="MOTD", value=' '.join(data['motd']['clean']), inline=False)
+                
+                # Lista de jugadores
+                if data['players']['online'] > 0:
+                    for player in data['players']['list']:
+                        player_name = player['name']
+                        player_avatar_url = f"https://mineskin.eu/avatar/{player_name}"
+                        embed.add_field(name="Player", value=f"{player_name}\n[Avatar]({player_avatar_url})", inline=True)
+                        embed.set_image(url=player_avatar_url)
+                
+                class InvokeCommandButton(discord.ui.View):
+                    @discord.ui.button(label="Start Server", style=discord.ButtonStyle.green)
+                    async def invoke_command(self, button: discord.ui.Button, interaction: discord.Interaction):
+                        # Defer the interaction response to acknowledge the button press
+                        await interaction.response.defer()
+                        # Llamar al método startserver directamente
+                        await self.startserver(interaction.channel)
+
+                view = InvokeCommandButton()
+                await ctx.send(embed=embed, view=view)
+            else:
+                await ctx.send(f"Failed to retrieve server status. Status code: {response.status_code}")
