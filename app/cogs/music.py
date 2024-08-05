@@ -314,9 +314,7 @@ class Music(commands.Cog):
     async def serverstatus(self, ctx):
         """Check if server status and refresh every 10 minutes"""
         URL = "https://api.mcsrvstat.us/3/pz-craft.online"
-
-        while True:
-            async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient() as client:
                 response = await client.get(URL)
                 if response.status_code == 200:
                     data = response.json()
@@ -354,5 +352,5 @@ class Music(commands.Cog):
                     await ctx.send(f"Failed to retrieve server status. Status code: {response.status_code}")
 
             # Esperar 10 minutos (1800 segundos) antes de volver a actualizar
-            await asyncio.sleep(600)  
+        await asyncio.sleep(600)  
     
