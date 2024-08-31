@@ -1,5 +1,6 @@
 import asyncio
 import re
+import random
 from urllib import response
 
 import discord
@@ -268,49 +269,96 @@ class Music(commands.Cog):
     @commands.hybrid_command(name="startserver")
     async def startserver(self, ctx):
         """Use to initialize the PZ SERVER"""
-        URL = "https://2sisz7vc3f.execute-api.us-east-1.amazonaws.com/prod/v1/launch"
-        
-        while True:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(URL)
-                embed = discord.Embed(title="INITIALIZING SERVER", color=discord.Color.greyple())
-                
-                # Añadir la imagen local al embed
-                gif_path = 'public/images/Enchanting_Table.gif'  # Ruta relativa a la imagen
-                if os.path.exists(gif_path):
-                    with open(gif_path, 'rb') as image_file:
-                        file = discord.File(image_file, filename='Enchanting_Table.gif')
-                        embed.set_image(url="attachment://Enchanting_Table.gif",)
+        print("Command startserver invoked")  # Log inicial
+        URL = "https://bio43yhumd.execute-api.us-east-1.amazonaws.com/prod/v1/server/start"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(URL)
+            print(f"Received response with status code: {response.status_code}")  # Log de la respuesta
 
-                if response.status_code == 200:
-                    data = response.json()
-                    message = data.get("message")
-                    sfn_execution_in_progress = data.get("sfn_execution_in_progress", "false").strip().lower()
-                    server_status = data.get("server_status", "false").strip().lower()
+            # Construir la respuesta
+            data = response.json()
+            success = data.get("success", "false").strip().lower()
+            server_status = data.get("server_status", "UNKNOWN").strip().upper()
 
-                    # Construyendo el mensaje
-                    response_message = f"Server started:\n- {message}\n- sfn_execution_in_progress: {sfn_execution_in_progress}"
+            embed = discord.Embed(title="INITIALIZING SERVER", color=discord.Color.greyple())
 
-                    if server_status == "true":
-                        embed.add_field(name="Server Start", value="Server start successful")
-                        embed.add_field(name="IP", value="pz-craft.online")
-                        embed.add_field(name="STATUS", value="Server is online")
-                        await ctx.send(embed=embed)
-                        await ctx.send(embed=embed, file=file)
-                        break
-                    else:
-                        embed.add_field(name="Retrying", value=response_message)
-                        await ctx.send(embed=embed)
-                        await asyncio.sleep(120)  # Esperar 2 minutos antes de volver a intentar
-                elif response.status_code == 202:
-                    embed.add_field(name="Server Start", value="Server start successful")
-                    embed.add_field(name="IP", value="pz-craft.online")
-                    embed.add_field(name="STATUS", value="Server is starting")
-                    await ctx.send(embed=embed, file=file)
-                    await ctx.send(embed=embed)
+            # Añadir la imagen local al embed
+            gif_path = 'public/images/Enchanting_Table.gif'  # Ruta relativa a la imagen
+            file = None
+            if os.path.exists(gif_path):
+                print(f"Image found at path: {gif_path}")  # Log de la imagen encontrada
+                with open(gif_path, 'rb') as image_file:
+                    file = discord.File(image_file, filename='Enchanting_Table.gif')
+                    embed.set_image(url="attachment://Enchanting_Table.gif")
+            else:
+                print(f"Image not found at path: {gif_path}")  # Log de la imagen no encontrada
+
+            if success == "true":
+                print("Server start successful")  # Log del inicio del servidor
+                embed.add_field(name="Server Start", value="Server start successful")
+                embed.add_field(name="IP", value="pz-craft.online")
+                embed.add_field(name="STATUS", value=server_status)
+            else:
+                print(f"Unexpected response: {data}")  # Log de una respuesta inesperada
+                embed.add_field(name="Error", value="Failed to start server")
+                embed.add_field(name="STATUS", value="Check server logs")
+
+            # Enviar el embed con el archivo si existe
+            if file:
+                print("Sending embed with file")  # Log del envío del embed con archivo
+                await ctx.send(embed=embed, file=file)
+            else:
+                print("Sending embed without file")  # Log del envío del embed sin archivo
+                await ctx.send(embed=embed)
+
+    
+    @commands.hybrid_command(name="stopserver")
+    async def stopserver(self, ctx):
+        """Use to stop the PZ SERVER"""
+        print("Command stopserver invoked")  # Log inicial
+        URL = "https://bio43yhumd.execute-api.us-east-1.amazonaws.com/prod/v1/server/stop"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(URL)
+            print(f"Received response with status code: {response.status_code}")  # Log de la respuesta
+
+        # Construir la respuesta
+        data = response.json()
+        success = data.get("success", "false").strip().lower()
+        server_status = data.get("server_status", "UNKNOWN").strip().upper()
+
+        embed = discord.Embed(title="STOPPING SERVER", color=discord.Color.red())
+
+        # Añadir la imagen local al embed
+        tnt_path = 'public/images/tnt.png'  # Ruta relativa a la imagen
+        file = None
+        if os.path.exists(tnt_path):
+            print(f"Image found at path: {tnt_path}")  # Log de la imagen encontrada
+            with open(tnt_path, 'rb') as image_file:
+                file = discord.File(image_file, filename='tnt.png')
+                embed.set_image(url="attachment://tnt.png")
+        else:
+            print(f"Image not found at path: {tnt_path}")  # Log de la imagen no encontrada
+
+        if success == "true":
+            print("Server stop initiated")  # Log del inicio de la parada del servidor
+            embed.add_field(name="Server Stop", value="Server stop successful")
+            embed.add_field(name="IP", value="pz-craft.online")
+            embed.add_field(name="STATUS", value=server_status)
+        elif success == "false":
+            print(f"Unexpected response: {data}")  # Log de una respuesta inesperada
+            embed.add_field(name="Status", value="off")
+            embed.add_field(name="Information", value=server_status)
+
+        # Enviar el embed con el archivo si existe
+        if file:
+            print("Sending embed with file")  # Log del envío del embed con archivo
+            await ctx.send(embed=embed, file=file)
+        else:
+            print("Sending embed without file")  # Log del envío del embed sin archivo
+            await ctx.send(embed=embed)
     
 
-    @commands.hybrid_command(name="serverstatus")
+    @commands.hybrid_command(name="serverstadistics")
     async def serverstatus(self, ctx):
         """Check if server status and refresh every 10 minutes"""
         URL = "https://api.mcsrvstat.us/3/pz-craft.online"
@@ -352,5 +400,89 @@ class Music(commands.Cog):
                     await ctx.send(f"Failed to retrieve server status. Status code: {response.status_code}")
 
             # Esperar 10 minutos (1800 segundos) antes de volver a actualizar
-        await asyncio.sleep(600)  
+        await asyncio.sleep(600)
+
+        self.frecuencia_frases = {
+            "tu mama": 0, "me vale mierda": 0, "no me interesa": 0, "mamala hpta": 0, "njds hpta, hpta njds": 0,
+            "No me interesan tus problemas": 0, "aja": 0, "que cagada loco": 0, "no solo eso, sos imbecil": 0,
+            "pues que patetico": 0, "Me meto en un round": 0, "Es una curva de aprendizaje alta": 0,
+            "No julio estás confundido": 0, "Nvm si son más estúpidos de lo que pensaba": 0, "Y los ingenieros?": 0,
+            "hay que leer un poco": 0, "Que si tío, que si": 0, "No hombre pero si se parece al de la uam": 0,
+            "Si les interesa lo pueden reparar": 0, "Te la debo pipi": 0, "dejame ver si te resuelvo balazo aca": 0,
+            "Efectivo hermano": 0, "Así parece": 0, "y que esperas?": 0, "you got me there": 0,
+            "i got shit on my ass": 0, "acabe con el racismo": 0, "Njds si Cristian le pusiera esas mismas ganas a la ingeniera real": 0,
+            "Que pendejo": 0, "Sheesh?": 0, "el tu mama": 0, "a tu mamita": 0, "veni callame": 0, "Basado": 0,
+            "Después apareces en todos los grupos de venta": 0, "F por Joshua": 0, "Pene?": 0,
+            "Porque ya no hablas conmigo?": 0, "No chambeaste?": 0, "Y si mejor me la chupas?": 0,
+            "Y no podes buscarlo vos?": 0, "me siento solo en esta noche especial": 0,
+            "julio no está haciendo nada de seguro": 0, "Sos autista": 0
+        }
+
+    @commands.hybrid_command(name="holavictor")
+    async def serverstatus(self, ctx):
+        """Victor te saluda"""
+        frases = [
+         "tu mama",
+         "me vale mierda",
+         "no me interesa",
+         "mamala hpta",
+         "njds hpta, hpta njds",
+         "No me interesan tus problemas",
+         "aja",
+         "que cagada loco",
+         "no solo eso, sos imbecil",
+         "pues que patetico",
+         "Me meto en un round",
+         "Es una curva de aprendizaje alta",
+         "No julio estás confundido",
+         "Nvm si son más estúpidos de lo que pensaba",
+         "Y los ingenieros?",
+         "hay que leer un poco",
+         "Que si tío, que si",
+         "No hombre pero si se parece al de la uam",
+         "Si les interesa lo pueden reparar",
+         "Te la debo pipi",
+         "dejame ver si te resuelvo balazo aca",
+         "Efectivo hermano",
+         "Así parece",
+         "y que esperas?",
+         "you got me there",
+         "i got shit on my ass",
+         "acabe con el racismo",
+         "Njds si Cristian le pusiera esas mismas ganas a la ingeniera real",
+         "Que pendejo",
+         "Sheesh?",
+         "tu mamita",
+         "a tu mamita",
+         "veni callame",
+         "Basado",
+         "Después apareces en todos los grupos de venta",
+         "F por Joshua",
+         "Pene?",
+         "Porque ya no hablas conmigo?",
+         "No chambeaste?",
+         "Y si mejor me la chupas?",
+         "Y no podes buscarlo vos?",
+         "me siento solo en esta noche especial",
+         "julio no está haciendo nada de seguro",
+         "Sos autista",
+         "Julio pero yo te amo"
+         ] 
+         # Seleccionar una frase aleatoria
+        frase_aleatoria = random.choice(frases)
     
+         # Crear un embed
+        embed = discord.Embed(title="Te saludo amablemente", color=discord.Color.blue())
+        embed.add_field(name="Respuesta", value=frase_aleatoria, inline=False)
+    
+        # Añadir la imagen local al embed si existe
+        jpg_path = 'public/images/victor.jpg'  # Ruta relativa a la imagen
+        if os.path.exists(jpg_path):
+          with open(jpg_path, 'rb') as image_file:
+            file = discord.File(image_file, filename='victor.jpg')
+            embed.set_image(url="attachment://victor.jpg")
+        # Enviar el embed con el archivo
+            await ctx.send(embed=embed, file=file)
+        else:
+          # Enviar el embed sin el archivo si la imagen no existe
+          await ctx.send(embed=embed)
