@@ -14,7 +14,6 @@ class Bot(commands.Bot):
         super().__init__(command_prefix="!", intents=intents)
 
     async def setup_hook(self) -> None:
-        # Initialize Lavalink after the bot logs in
         self.lavalink = lavalink.Client(self.user.id)
         self.lavalink.add_node(
             host="34.227.108.209",

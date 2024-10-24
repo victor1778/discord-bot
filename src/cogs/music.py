@@ -1,12 +1,3 @@
-"""
-This example cog demonstrates basic usage of Lavalink.py, using the DefaultPlayer.
-As this example primarily showcases usage in conjunction with discord.py, you will need to make
-modifications as necessary for use with another Discord library.
-
-Usage of this cog requires Python 3.6 or higher due to the use of f-strings.
-Compatibility with Python 3.5 should be possible if f-strings are removed.
-"""
-
 import re
 
 import discord
@@ -219,9 +210,9 @@ class Music(commands.Cog):
         channel = guild.get_channel(channel_id)
 
         if channel:
-            await channel.send(
-                "Now playing: {} by {}".format(event.track.title, event.track.author)
-            )
+            embed = discord.Embed(color=discord.Color.blurple(), title="Now Playing")
+            embed.description = f"[{event.track.title}]({event.track.uri})"
+            await channel.send(embed=embed)
 
     @lavalink.listener(QueueEndEvent)
     async def on_queue_end(self, event: QueueEndEvent):
@@ -257,7 +248,9 @@ class Music(commands.Cog):
         #   EMPTY    - no results for the query (result.tracks will be empty)
         #   ERROR    - the track encountered an exception during loading
         if results.load_type == LoadType.EMPTY:
-            return await ctx.send("I could not find any tracks for that query.")
+            embed.title = "Oops..."
+            embed.description = "I couldn't find any results for that query."
+            await ctx.send(embed=embed)
         elif results.load_type == LoadType.PLAYLIST:
             tracks = results.tracks
 
@@ -269,21 +262,46 @@ class Music(commands.Cog):
 
             embed.title = "Playlist Enqueued!"
             embed.description = f"{results.playlist_info.name} - {len(tracks)} tracks"
+            await ctx.send(embed=embed)
         else:
             track = results.tracks[0]
-            embed.title = "Track Enqueued"
-            embed.description = f"[{track.title}]({track.uri})"
+
+            if player.is_playing:
+                embed.title = "Track Enqueued"
+                embed.description = f"[{track.title}]({track.uri})"
 
             # requester isn't necessary but it helps keep track of who queued what.
             # You can store additional metadata by passing it as a kwarg (i.e. key=value)
             player.add(track=track, requester=ctx.author.id)
 
-        await ctx.send(embed=embed)
-
         # We don't want to call .play() if the player is playing as that will effectively skip
         # the current track.
         if not player.is_playing:
             await player.play()
+
+    @commands.hybrid_command(aliases=["sk"])
+    @commands.check(create_player)
+    async def skip(self, ctx):
+        """Skips to the next track in the queue."""
+        # Get the player for this guild from cache.
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+
+        await player.skip()
+
+    @commands.hybrid_command(aliases=["q"])
+    @commands.check(create_player)
+    async def queue(self, ctx):
+        """Displays the current queue."""
+        # Get the player for this guild from cache.
+        player = self.bot.lavalink.player_manager.get(ctx.guild.id)
+
+        queue = player.queue
+
+        embed = discord.Embed(color=discord.Color.blurple(), title="Queue")
+        embed.description = "\n".join(
+            [f"{index + 1}. {track.title}" for index, track in enumerate(queue)]
+        )
+        await ctx.send(embed=embed)
 
     @commands.hybrid_command(aliases=["lp"])
     @commands.check(create_player)
